@@ -4,7 +4,7 @@ function compare(amount, el) {
     /**
      * Those references should be got from the backend
      */
-    var references = [{count: 5.3, 
+    var references = [{count: 9, 
 		       icon: "http://trac.opencoin.org/trac/opencoin/export/343/trunk/sandbox/jhb/mobile/icons/coins.svg",
 	               head: 'stolen money',
 	               desc: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt '
@@ -39,6 +39,9 @@ var ComparatorView = Backbone.View.extend({
     initialize: function(args){
 	_.bindAll(this);
 
+	paco = this.model;
+	console.log("model", this.model);
+
 	var w = args.width || this.$el.width();
 	var h = args.height || w / 2;
 	this.margin = args.margin || {top: 10, right: 10, bottom: 20, left: 10}; // top right bottom left
@@ -70,18 +73,60 @@ var ComparatorView = Backbone.View.extend({
 	console.log("*** Rendering...");
 	this.amount = this.model.get('amount');
 	this.references = this.model.get('references');
+
+	var referencesCount = _.reduce(this.references, 
+				       function(memo, d) {return memo + d.count;},
+				       0);
 	
-	this.gAmount.selectAll('rect.amount')
-	    .data([this.amount])
-	  .enter()
+	yCount = Math.round(Math.sqrt(referencesCount));
+	xCount = ( Math.pow(yCount,2) == referencesCount )? yCount : yCount + 1;
+
+	iconSize = this.height / yCount;
+
+	x = d3.scale.linear()
+	    .domain([0, xCount])
+	    .range([0, (this.width/2) / xCount]);
+	y = d3.scale.linear()	    
+	    .domain([0, yCount])
+	    .range([0, this.height/ yCount]);
+	
+
+	var rectAmount = this.gAmount.selectAll('rect.amount')
+	    .data([this.amount]);
+	rectAmount.enter()
 	    .append('svg:rect')
 	    .classed('amount', true)
 	    .style('title', String)
+	    .attr('x', this.width / 4)
+	    .attr('y', this.height / 2)
+	    .attr('rx', '15px')
+	    .attr('ry', '15px')
+	    .attr('width', 0)
+	    .attr('height', 0)
+	   .transition()
 	    .attr('x', 0)
 	    .attr('y', 0)
 	    .attr('width', 0.9 * this.width/2)
-	    .attr('height', 0.9 * this.height)
-	   .append("svg:title")
+	    .attr('height', 0.9 * this.height);
+	rectAmount.enter().append("svg:title")
             .text(function(d) { return ''+ d + ' €'; });
+
+
+  	var referenceData = _.reduce(this.references, function(memo, d){ _.each(_.range(d.count), function(){memo.push(d);}); return memo;}, []);
+
+	var rectReference = this.gReferences.selectAll('rect.reference')
+	    .data(referenceData);
+	rectReference.enter()
+	    .append('svg:rect')
+	    .classed('amount', true)
+	    .style('title', String)
+	    .attr('x', function(d, i) {return x(Math.round(i / xCount));})
+	    .attr('y', function(d, i) {return y(i % yCount);})
+//	    .attr('rx', '15px')
+//	    .attr('ry', '15px')
+	    .attr('width', iconSize)
+	    .attr('height', iconSize);
+
+	
     }
 });
