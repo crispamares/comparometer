@@ -1,1 +1,4 @@
-rect.amount {fill: steelblue; stroke: white; } 
+rect.amount {fill: #ff7f0e; stroke: white; } 
+rect.reference {fill: #1f77b4; stroke: white; } 
+rect.reference.stolen {fill: #1f77b4; stroke: white; } 
+rect.reference.fraud {fill: #d62728; stroke: white; } 
