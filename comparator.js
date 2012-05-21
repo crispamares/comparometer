@@ -1,3 +1,6 @@
+/**
+ * https://docs.google.com/spreadsheet/ccc?key=0AgLTtFH_1iwUdFNHeFVzRVZSS2Y2R0ZHeDByTjBXNXc
+ */
 function compare(amount, el) {
     console.log("*** Compare", amount);
 
@@ -24,6 +27,23 @@ function compare(amount, el) {
 			     + 'voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat'
 			     + ' non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.' 
 		      }];
+
+    var ds = new Miso.Dataset({
+		 importer : Miso.Importers.GoogleSpreadsheet,
+		 parser : Miso.Parsers.GoogleSpreadsheet,
+		 key : "0AgLTtFH_1iwUdFNHeFVzRVZSS2Y2R0ZHeDByTjBXNXc",
+		 worksheet : "1"
+    });
+
+    ds.fetch({ 
+	success : function() {
+	    console.log(ds.columnNames());
+	},
+	error : function() {
+	    alert("Are you sure you are connected to the internet?");
+	}
+    });
+
 
     var model = new ComparatorModel({amount:amount, references:references});
     var view = new ComparatorView({model: model, el:el});
@@ -91,20 +111,13 @@ var ComparatorView = Backbone.View.extend({
 	var referencesCount = _.reduce(this.references, 
 				       function(memo, d) {return memo + d.count;},
 				       0);
+
+	var gridfn = gridLayout()
+	    .width(this.sideWidth)
+	    .height(this.height)
+	    .count(30);	    
+	var grid = gridfn();
 	
-	yCount = Math.round(Math.sqrt(referencesCount));
-	xCount = ( Math.pow(yCount,2) == referencesCount )? yCount : yCount + 1;
-
-	iconSize = this.height / yCount;
-
-	x = d3.scale.linear()
-	    .domain([0, xCount])
-	    .range([0, this.sideWidth]);
-	y = d3.scale.linear()	    
-	    .domain([0, yCount])
-	    .range([0, this.height]);
-	
-
 	var rectAmount = this.gAmount.selectAll('rect.amount')
 	    .data([this.amount]);
 	rectAmount.enter()
@@ -133,21 +146,76 @@ var ComparatorView = Backbone.View.extend({
 	    .append('svg:rect')
 	    .attr('class', function(d,i) {return d.classed;})
 	    .classed('reference', true)
- 	    .attr('x', function(d, i) {return x(Math.floor(i / xCount)) + iconSize/2;})
-	    .attr('y', function(d, i) {return y(i % yCount) + iconSize/2;})
+ 	    .attr('x', function(d, i) {return grid.x(i) + grid.xSize/2;})
+	    .attr('y', function(d, i) {return grid.y(i) + grid.ySize/2;})
 	    .attr('rx', '15px')
 	    .attr('ry', '15px')
 	    .attr('width', 0)
 	    .attr('height', 0)
+	    .attr('data-content', function(d) {return d.desc;})
+	    .attr('data-original-title', function(d) {return d.head;})
 	   .transition()
 	    .delay(function(d,i) {return i*20;})
-	    .attr('x', function(d, i) {return x(Math.floor(i / xCount));})
-	    .attr('y', function(d, i) {return y(i % yCount);})
-	    .attr('width', iconSize)
-	    .attr('height', iconSize);
-	rectReference.enter().append("svg:title")
-            .text(function(d) { return d.head; });
-
+	    .attr('x', function(d, i) {return grid.x(i);})
+	    .attr('y', function(d, i) {return grid.y(i);})
+	    .attr('width', grid.xSize)
+	    .attr('height', grid.ySize);
+	rectReference.each( function (p) { $(this).popover({placement:'bottom'});});
+	 
 	
     }
 });
+
+
+
+function gridLayout() {
+    var margin = {top: 0, right: 0, bottom: 0, left: 0},
+      width = 960,
+      height = 500;
+
+    var count = 10,
+	x = d3.scale.linear(),
+	y = d3.scale.linear();
+
+    function gridLayout() {
+	var xCount = Math.ceil(Math.sqrt(count)),
+	    yCount = xCount,
+	    xSize = (width - margin.right - margin.left) / xCount,
+	    ySize = (height - margin.top - margin.bottom) / yCount;
+	console.log(count, xCount, yCount, width, height);
+
+	x.domain([0, xCount]).range([0, width - margin.right - margin.left]);
+	y.domain([0, yCount]).range([0, height - margin.top - margin.bottom]);
+
+	return {x: function(i) {return x(i % xCount) ;},
+		y: function(i) {return y(Math.floor(i / xCount)) ;},
+		xSize: xSize,
+	        ySize: ySize};
+    }
+
+    gridLayout.count = function(_) {
+	if (!arguments.length) return count;
+	count = _;
+	return gridLayout;
+    };
+
+    gridLayout.margin = function(_) {
+	if (!arguments.length) return margin;
+	margin = _;
+	return gridLayout;
+    };
+
+    gridLayout.width = function(_) {
+	if (!arguments.length) return width;
+	width = _;
+	return gridLayout;
+    };
+
+    gridLayout.height = function(_) {
+	if (!arguments.length) return height;
+	height = _;
+	return gridLayout;
+    };
+
+    return gridLayout;
+}
