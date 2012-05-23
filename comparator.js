@@ -9,9 +9,9 @@ function compare(amount, el) {
      */
     var references = [{count: 18, 
 		       icon: "http://trac.opencoin.org/trac/opencoin/export/343/trunk/sandbox/jhb/mobile/icons/coins.svg",
-	               head: 'stolen money',
+	               headline: 'stolen money',
 		       classed: 'stolen',
-	               desc: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt '
+	               description: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt '
 			     + 'ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco'
 			     + ' laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in '
 			     + 'voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat'
@@ -19,16 +19,16 @@ function compare(amount, el) {
 		      },
 		      {count: 7, 
 		       icon: "http://trac.opencoin.org/trac/opencoin/export/343/trunk/sandbox/jhb/mobile/icons/coins.svg",
-	               head: 'fiscal fraud',
+	               headline: 'fiscal fraud',
 		       classed: 'fraud',
-	               desc: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt '
+	               description: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt '
 			     + 'ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco'
 			     + ' laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in '
 			     + 'voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat'
 			     + ' non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.' 
 		      }];
 
-    var ds = new Miso.Dataset({
+    ds = new Miso.Dataset({
 		 importer : Miso.Importers.GoogleSpreadsheet,
 		 parser : Miso.Parsers.GoogleSpreadsheet,
 		 key : "0AgLTtFH_1iwUdFNHeFVzRVZSS2Y2R0ZHeDByTjBXNXc",
@@ -38,13 +38,19 @@ function compare(amount, el) {
     ds.fetch({ 
 	success : function() {
 	    console.log(ds.columnNames());
+	    //references = ds.rows().toJSON();
+	    draw(amount, ds, el);
 	},
 	error : function() {
 	    alert("Are you sure you are connected to the internet?");
 	}
     });
 
+ 
+    
+}
 
+function draw(amount, references, el) {
     var model = new ComparatorModel({amount:amount, references:references});
     var view = new ComparatorView({model: model, el:el});
     view.render();
@@ -58,8 +64,8 @@ var ComparatorModel = Backbone.Model.extend({
 	    /*
 	     * [{count: 5.3, 
 	     *   icon: "http://trac.opencoin.org/trac/opencoin/export/343/trunk/sandbox/jhb/mobile/icons/coins.svg",
-	     *   head: 'stolen money',
-	     *   desc: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.' 
+	     *   headline: 'stolen money',
+	     *   desccription: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.' 
 	     * }]
 	     */
 	};
@@ -108,14 +114,14 @@ var ComparatorView = Backbone.View.extend({
 	this.amount = this.model.get('amount');
 	this.references = this.model.get('references');
 
-	var referencesCount = _.reduce(this.references, 
-				       function(memo, d) {return memo + d.count;},
-				       0);
+	var ref = this.references.rows().toJSON();
+	var referencesCount = this.references.sum('count');
+  	var referenceData = _.reduce(ref, function(memo, d){ _.each(_.range(d.count), function(){memo.push(d);}); return memo;}, []);
 
 	var gridfn = gridLayout()
 	    .width(this.sideWidth)
 	    .height(this.height)
-	    .count(30);	    
+	    .count(referencesCount);	    
 	var grid = gridfn();
 	
 	var rectAmount = this.gAmount.selectAll('rect.amount')
@@ -137,13 +143,28 @@ var ComparatorView = Backbone.View.extend({
 	rectAmount.enter().append("svg:title")
             .text(function(d) { return ''+ d + ' €'; });
 
-
-  	var referenceData = _.reduce(this.references, function(memo, d){ _.each(_.range(d.count), function(){memo.push(d);}); return memo;}, []);
-
 	var rectReference = this.gReferences.selectAll('rect.reference')
 	    .data(referenceData);
-	rectReference.enter()
-	    .append('svg:rect')
+	var rectReferenceEnter = rectReference.enter();
+	 
+	rectReferenceEnter.append('svg:image')
+	    .attr('xlink:href', function(d){return d.icon;})
+ 	    .attr('x', function(d, i) {return grid.x(i) + grid.xSize/2;})
+	    .attr('y', function(d, i) {return grid.y(i) + grid.ySize/2;})
+	    .attr('rx', '15px')
+	    .attr('ry', '15px')
+	    .attr('width', 0)
+	    .attr('height', 0)
+	    .attr('data-content', function(d) {return d.description;})
+	    .attr('data-original-title', function(d) {return d.headline;})
+	   .transition()
+	    .delay(function(d,i) {return i*20;})
+	    .attr('x', function(d, i) {return grid.x(i);})
+	    .attr('y', function(d, i) {return grid.y(i);})
+	    .attr('width', grid.xSize)
+	    .attr('height', grid.ySize);
+
+	rectReferenceEnter.append('svg:rect')
 	    .attr('class', function(d,i) {return d.classed;})
 	    .classed('reference', true)
  	    .attr('x', function(d, i) {return grid.x(i) + grid.xSize/2;})
@@ -152,8 +173,8 @@ var ComparatorView = Backbone.View.extend({
 	    .attr('ry', '15px')
 	    .attr('width', 0)
 	    .attr('height', 0)
-	    .attr('data-content', function(d) {return d.desc;})
-	    .attr('data-original-title', function(d) {return d.head;})
+	    .attr('data-content', function(d) {return d.description;})
+	    .attr('data-original-title', function(d) {return d.headline;})
 	   .transition()
 	    .delay(function(d,i) {return i*20;})
 	    .attr('x', function(d, i) {return grid.x(i);})
@@ -161,7 +182,7 @@ var ComparatorView = Backbone.View.extend({
 	    .attr('width', grid.xSize)
 	    .attr('height', grid.ySize);
 	rectReference.each( function (p) { $(this).popover({placement:'bottom'});});
-	 
+
 	
     }
 });
