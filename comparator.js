@@ -1,11 +1,11 @@
 /**
  * https://docs.google.com/spreadsheet/ccc?key=0AgLTtFH_1iwUdFNHeFVzRVZSS2Y2R0ZHeDByTjBXNXc
  */
-function compare(amount, el) {
+function compare(amount, el, google_key) {
     console.log("*** Compare", amount);
 
     /**
-     * Those references should be got from the backend
+     * Those references should be gotten from the backend
      */
     var references = [{count: 18, 
 		       icon: "http://trac.opencoin.org/trac/opencoin/export/343/trunk/sandbox/jhb/mobile/icons/coins.svg",
@@ -31,7 +31,7 @@ function compare(amount, el) {
     ds = new Miso.Dataset({
 		 importer : Miso.Importers.GoogleSpreadsheet,
 		 parser : Miso.Parsers.GoogleSpreadsheet,
-		 key : "0AgLTtFH_1iwUdFNHeFVzRVZSS2Y2R0ZHeDByTjBXNXc",
+		 key : google_key,
 		 worksheet : "1"
     });
 
@@ -40,6 +40,7 @@ function compare(amount, el) {
 	    console.log(ds.columnNames());
 	    //references = ds.rows().toJSON();
 	    draw(amount, ds, el);
+	    el.append('<a href="https://docs.google.com/spreadsheet/ccc?key='+google_key+'" target="_blank"> datos </a>');
 	},
 	error : function() {
 	    alert("Are you sure you are connected to the internet?");
